@@ -3,18 +3,36 @@
 var VSHADER_SOURCE =`
    attribute vec4 a_Position;
    uniform float u_Size;
+   attribute vec2 a_UV;
+   varying vec2 v_UV;
    void main() {
       gl_Position = a_Position;
       gl_PointSize = u_Size;
+      v_UV = a_UV;
    }`
 
 // Fragment shader program
 var FSHADER_SOURCE =`
    precision mediump float;
    uniform vec4 u_FragColor;
+   uniform vec4 u_BaseColor;
+
+   varying vec2 v_UV;
+   uniform sampler2D u_Sampler0;
+   uniform int u_texColorWeight;
+   uniform int u_whichTexture;
+
    void main() {
-      gl_FragColor = u_FragColor;
+      if(u_whichTexture==0){
+         gl_FragColor = float(1-u_texColorWeight)*(u_BaseColor)+float(u_texColorWeight)*(texture2D(u_Sampler0,v_UV));
+      }else{
+         gl_FragColor = u_FragColor;
+      }
+      
    }`
+
+
+
 const POINT = 0;
 const TRIANGLE = 1;
 const CIRCLE = 2;
@@ -30,6 +48,10 @@ let g_selectedSize = 5;
 let g_selectedType = POINT;
 let g_segment = 10;
 let g_cat = false;
+let u_Sampler0;
+let u_texColorWeight;
+let u_whichTexture;
+
 
 function setupWebGL(){
    // Retrieve <canvas> element
@@ -70,6 +92,26 @@ function connectVariableToGLSL(){
      console.log('Failed to get the storage location of u_Size');
      return;
    }
+
+   u_Sampler0 = gl.getUniformLocation(gl.program, 'u_Sampler0');
+   if (!u_Sampler0) {
+     console.log('Failed to get the storage location of u_Sampler0');
+     return false;
+   }
+
+   // Get the storage location of u_texColorWeight
+   u_texColorWeight = gl.getUniformLocation(gl.program,'u_texColorWeight');
+   if (!u_texColorWeight) {
+     console.log('Failed to get the storage location of u_texColorWeight');
+     return false;
+   }
+
+   // Get the storage location of u_whichTexture
+   u_whichTexture = gl.getUniformLocation(gl.program, 'u_whichTexture');
+   if (!u_whichTexture) {
+     console.log('Failed to get the storage location of u_whichTexture');
+     return false;
+   }
 }
 
 function convertCoordinatesEventToGL(ev){
@@ -83,9 +125,19 @@ function convertCoordinatesEventToGL(ev){
 }
 
 
+let birdPosition = [-.69, -0.02];
+let gameStarted = false;
+
+
+
 function addActionsForHtmlUI(){
 
    document.getElementById('clearButton').onclick = function(){g_shapesList=[]; renderAllShapes();}
+   document.getElementById('startGame').onclick = function(){
+                                                               gameStarted = true; 
+                                                               
+                                                            
+                                                            }
 
    document.getElementById('pointButton').onclick = function(){g_selectedType=POINT};
    document.getElementById('triangleButton').onclick = function(){g_selectedType=TRIANGLE};
@@ -112,6 +164,7 @@ function main() {
    //Set up GLSL shader programs and connect GLSL variables
    connectVariableToGLSL();
    addActionsForHtmlUI();
+   initTextures(gl);
 
   // Register function (event handler) to be called on a mouse press
   canvas.onmousedown = click;
@@ -126,6 +179,108 @@ function main() {
 
   // Clear <canvas>
   gl.clear(gl.COLOR_BUFFER_BIT);
+  document.onkeydown = keydown;
+     
+   requestAnimationFrame(tick);
+  
+}
+
+function initTextures(gl) {
+   // Create a texture object
+   
+   var image0 = new Image();
+   var texture0 = gl.createTexture();
+   if (!texture0) {
+     console.log('Failed to create the texture object');
+     return false;
+   }
+ 
+   // Get the storage location of u_Sampler0 and u_Sampler1
+   var u_Sampler0 = gl.getUniformLocation(gl.program, 'u_Sampler0');
+   if (!u_Sampler0) {
+     console.log('Failed to get the storage location of u_Sampler');
+     return false;
+   }
+ 
+   if (!image0) {
+     console.log('Failed to create the image object');
+     return false;
+   }
+ 
+   image0.onload = function(){ sendImageToTEXTURE(gl, texture0, u_Sampler0, image0); };
+ 
+   image0.src = 'flappybird.jpg';
+ 
+ 
+   return true;
+ }
+
+ function sendImageToTEXTURE(gl, texture, u_Sampler, image) {
+
+   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+ 
+   gl.activeTexture(gl.TEXTURE0);
+ 
+   gl.bindTexture(gl.TEXTURE_2D, texture);
+ 
+   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+ 
+   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+ 
+   gl.uniform1i(u_Sampler, 0);   
+ 
+   gl.clear(gl.COLOR_BUFFER_BIT);
+ }
+ 
+
+let restartGravity = false;
+let fall = 0.00005;
+
+function tick() {
+   // Save the current info
+   // g_seconds=performance.now()/1000.0-g_startTime;
+
+   // updateAnimationAngles();
+   // Draw everything
+   renderAllShapes();
+   
+   if (gameStarted == true) {
+      if(restartGravity == true){
+         fall = 0.00005
+      }else{
+         console.log("In here");
+         fall += 0.0005;
+      }
+      console.log(fall);
+      restartGravity = false;
+      birdPosition[1] -= fall;
+
+      // Tell the browser to update again when it has time 
+   }
+   // if bird hits the bottom, in here add if bird touches pipe
+   if(birdPosition[1] <= -0.93)
+   {
+      gameStarted = false;
+      birdPosition = [-.69, -0.02];
+   }
+   requestAnimationFrame(tick);
+   
+}
+
+
+function keydown(ev){
+   if (ev.keyCode==87) { //W key
+      gameStarted = true;
+      restartGravity = true;
+      birdPosition[1] += 0.15;
+
+   }else if(ev.keyCode==32){ //Space bar
+      gameStarted = true;
+      restartGravity = true;
+      birdPosition[1] += 0.15;
+
+   }
+      // renderScene();
 }
 
 var g_shapesList = [];
@@ -158,16 +313,26 @@ function click(ev) {
       point.segments = g_segment;
    }
    point.position = [x,y];
+   console.log("x: " + x);
+   console.log("y: " + y);
    point.color = g_selectedColor.slice();
    point.size = g_selectedSize;
    g_shapesList.push(point);
 
-  renderAllShapes();
+   renderAllShapes();
 }
 
 function renderAllShapes(){
    // Clear <canvas>
    gl.clear(gl.COLOR_BUFFER_BIT);
+
+   point = new Point();
+   point.position=birdPosition;
+   point.textureNum = 1;
+   point.color = [1, 0, 0, 1];
+   point.size = 30;
+   point.render();
+   
 
    var len = g_shapesList.length;
    for(var i = 0; i < len; i++) {
