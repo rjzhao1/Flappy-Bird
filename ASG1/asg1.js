@@ -26,7 +26,7 @@ let a_Position;
 let u_FragColor;
 let u_Size;
 let g_selectedColor = [1.0,1.0,1.0,1.0];
-let g_selectedSize = 5;
+let g_selectedSize = 20;
 let g_selectedType = POINT;
 let g_segment = 10;
 let g_cat = false;
@@ -106,6 +106,8 @@ function addActionsForHtmlUI(){
 
 
 }
+
+var g_shapesList = [];
 function main() {
    //set up canvas and gl variables
    setupWebGL();
@@ -113,22 +115,83 @@ function main() {
    connectVariableToGLSL();
    addActionsForHtmlUI();
 
+
+
   // Register function (event handler) to be called on a mouse press
   canvas.onmousedown = click;
-  canvas.onmousemove = function(ev){
-                           if(ev.buttons==1){click(ev)}
-                           if(g_cat){catEvent(ev)}};
+  // canvas.onmousemove = function(ev){
+  //                          if(ev.buttons==1){click(ev)}
+  //                          if(g_cat){catEvent(ev)}};
 
 
 
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  renderAllShapes();
 
   // Clear <canvas>
   gl.clear(gl.COLOR_BUFFER_BIT);
+
+  let pipe_x=-0.4;
+
+  for(var i = 0;i<5;i++){
+     generate_pipe(pipe_x);
+     pipe_x+=0.35;
+  }
+  renderAllShapes();
+  requestAnimationFrame(tick);
 }
 
-var g_shapesList = [];
+function generate_pipe(pipe_x){
+   let height = Math.random()*(50-30)+30;
+   let bot_pipe = new Rectangle();
+   bot_pipe.position = [pipe_x,-1];
+   bot_pipe.color = g_selectedColor.slice();
+   bot_pipe.size = height;
+   g_shapesList.push(bot_pipe);
+
+
+   let top_pipe = new Rectangle();
+   top_pipe.position = [pipe_x,1];
+   top_pipe.color = g_selectedColor.slice();
+   top_pipe.size = height;
+   top_pipe.top = true;
+   g_shapesList.push(top_pipe);
+
+   pipe_x+=0.35;
+}
+
+var g_startTime = performance.now()/1000.0;
+var g_seconds = performance.now()/1000.0-g_startTime;
+function tick(){
+   g_seconds=performance.now()/1000.0-g_startTime;
+   // console.log(g_seconds);
+
+   updateAnimationAngle();
+
+   renderAllShapes();
+
+   requestAnimationFrame(tick);
+}
+
+function updateAnimationAngle(){
+   var len = g_shapesList.length;
+   var pop = 0;
+   for(var i = 0; i < len; i++) {
+      g_shapesList[i].position[0]=g_shapesList[i].position[0]-0.01;
+      if(g_shapesList[i].position[0]<-1){
+         pop+=1;
+      }
+   }
+
+   for(var i = 0; i < pop; i++) {
+      g_shapesList.shift();
+      let new_pipe_x = g_shapesList[g_shapesList.length-1].position[0]+0.35;
+      generate_pipe(new_pipe_x);
+   }
+}
+
+
 
 //attempt to create the cat and mouse game. When the cat button is
 //pressed. the canvas will be cleared and a point will follow

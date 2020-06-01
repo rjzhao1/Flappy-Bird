@@ -3,7 +3,8 @@ class Rectangle {
       this.type = 'rectangle';
       this.position = [0.0,0.0,0.0];
       this.color = [1.0,1.0,1.0];
-      this.size = 5.0;
+      this.size = 20.0;
+      this.top = false;
    }
    render(){
       var xy = this.position;
@@ -16,8 +17,15 @@ class Rectangle {
       //Pass the size of Object
       gl.uniform1f(u_Size, size);
       // Draw
-      var d = this.size/200.0;
-      drawTriangle([xy[0],xy[1],xy[0]+0.1,xy[1],xy[0],xy[1]+d]);
-      drawTriangle([xy[0]+0.1,xy[1]+d,xy[0],xy[1]+d,xy[0]+0.1,xy[1]]);
+      var d = this.size/60;
+
+      if(this.top){
+         drawTriangle([xy[0],xy[1],xy[0]+0.15,xy[1],xy[0],xy[1]-d]);
+         drawTriangle([xy[0]+0.15,xy[1]-d,xy[0],xy[1]-d,xy[0]+0.15,xy[1]]);
+      }else{
+         drawTriangle([xy[0],xy[1],xy[0]+0.15,xy[1],xy[0],xy[1]+d]);
+         drawTriangle([xy[0]+0.15,xy[1]+d,xy[0],xy[1]+d,xy[0]+0.15,xy[1]]);
+      }
+
    }
 }
