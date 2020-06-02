@@ -29,7 +29,9 @@ let g_selectedColor = [1.0,1.0,1.0,1.0];
 let g_selectedSize = 20;
 let g_selectedType = POINT;
 let g_segment = 10;
-let g_cat = false;
+// let g_cat = false;
+let birdPosition = [-.69, -0.02];
+let gameStarted = false;
 
 function setupWebGL(){
    // Retrieve <canvas> element
@@ -101,7 +103,19 @@ function addActionsForHtmlUI(){
 
    document.getElementById('circleButton').onclick = function(){g_selectedType=CIRCLE};
 
-   document.getElementById('catButton').onclick = function(ev){g_shapesList=[];renderAllShapes(); g_cat = !g_cat;};
+   document.getElementById('startGame').onclick = function(ev){
+      g_shapesList=[];
+      let pipe_x=-0.4;
+
+      for(var i = 0;i<5;i++){
+         generate_pipe(pipe_x);
+         pipe_x+=0.35;
+      }
+      renderAllShapes();
+      gameStarted = !gameStarted;
+   }
+
+   // document.getElementById('catButton').onclick = function(ev){g_shapesList=[];renderAllShapes(); g_cat = !g_cat;};
 
 
 
@@ -177,17 +191,19 @@ function tick(){
 function updateAnimationAngle(){
    var len = g_shapesList.length;
    var pop = 0;
-   for(var i = 0; i < len; i++) {
-      g_shapesList[i].position[0]=g_shapesList[i].position[0]-0.01;
-      if(g_shapesList[i].position[0]<-1){
-         pop+=1;
+   if(gameStarted){
+      for(var i = 0; i < len; i++) {
+         g_shapesList[i].position[0]=g_shapesList[i].position[0]-0.01;
+         if(g_shapesList[i].position[0]<-1){
+            pop+=1;
+         }
       }
-   }
 
-   for(var i = 0; i < pop; i++) {
-      g_shapesList.shift();
-      let new_pipe_x = g_shapesList[g_shapesList.length-1].position[0]+0.35;
-      generate_pipe(new_pipe_x);
+      for(var i = 0; i < pop; i++) {
+         g_shapesList.shift();
+         let new_pipe_x = g_shapesList[g_shapesList.length-1].position[0]+0.35;
+         generate_pipe(new_pipe_x);
+      }
    }
 }
 
