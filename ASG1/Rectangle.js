@@ -24,11 +24,39 @@ class Rectangle {
       var d = this.size/60;
 
       if(this.top){
-         drawTriangleUV([xy[0],xy[1],xy[0]+0.15,xy[1],xy[0],xy[1]-d],  [xy[0]+0.15,xy[1]-d,xy[0],xy[1]-d,xy[0]+0.15,xy[1]]);
+         drawTriangleUV([xy[0],xy[1],xy[0]+0.15,xy[1],xy[0],xy[1]-d], [xy[0]+0.15,xy[1]-d,xy[0],xy[1]-d,xy[0]+0.15,xy[1]]);
          drawTriangleUV([xy[0]+0.15,xy[1]-d,xy[0],xy[1]-d,xy[0]+0.15,xy[1]],  [xy[0],xy[1],xy[0]+0.15,xy[1],xy[0],xy[1]-d]);
       }else{
          drawTriangleUV([xy[0],xy[1],xy[0]+0.15,xy[1],xy[0],xy[1]+d], [xy[0]+0.15,xy[1]-d,xy[0],xy[1]-d,xy[0]+0.15,xy[1]]);
          drawTriangleUV([xy[0]+0.15,xy[1]+d,xy[0],xy[1]+d,xy[0]+0.15,xy[1]], [xy[0],xy[1],xy[0]+0.15,xy[1],xy[0],xy[1]-d]);
+      }
+
+   }
+
+   collide(rect){
+
+      var x_pos1=this.position[0];
+      var x_pos2=this.position[0]+0.10;
+      var contact_x1= rect.position[0];
+      var contact_x2= rect.position[0]+0.15;
+
+
+      if((x_pos1>=contact_x1 && x_pos1<=contact_x2)||(x_pos2>=contact_x1&&x_pos2<=contact_x2)){
+         if(rect.top){
+            let contact_y= rect.position[1]-rect.size/60;
+            let y_pos = this.position[1]+this.size/60;
+            if(y_pos>contact_y){
+               return true;
+            }
+         }else{
+            let contact_y= rect.position[1]+rect.size/60;
+            let y_pos = this.position[1];
+            if(y_pos<contact_y){
+               return true;
+            }
+         }
+      }else{
+         return false;
       }
 
    }

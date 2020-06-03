@@ -43,7 +43,7 @@ let g_selectedSize = 20;
 let g_selectedType = POINT;
 let g_segment = 10;
 // let g_cat = false;
-let birdPosition = [-.69, -0.02];
+let birdPosition = [-.9, -0.02];
 let gameStarted = false;
 let u_Sampler0;
 let u_Sampler1;
@@ -127,28 +127,8 @@ function addActionsForHtmlUI(){
 
    document.getElementById('clearButton').onclick = function(){g_shapesList=[]; renderAllShapes();}
 
-   document.getElementById('pointButton').onclick = function(){g_selectedType=POINT};
-   document.getElementById('triangleButton').onclick = function(){g_selectedType=TRIANGLE};
-   document.getElementById('circleButton').onclick = function(){g_selectedType=CIRCLE};
-
-
-   document.getElementById('redSlide').addEventListener('mouseup',function(){g_selectedColor[0]=this.value/100});
-   document.getElementById('greenSlide').addEventListener('mouseup',function(){g_selectedColor[1]=this.value/100});
-   document.getElementById('blueSlide').addEventListener('mouseup',function(){g_selectedColor[2]=this.value/100});
-   document.getElementById('segmentSlide').addEventListener('mouseup',function(){g_segment=this.value});
-
-   document.getElementById('sizeSlide').addEventListener('mouseup',function(){g_selectedSize=this.value});
-
-   document.getElementById('circleButton').onclick = function(){g_selectedType=CIRCLE};
-
    document.getElementById('startGame').onclick = function(ev){
-      g_shapesList=[];
-      let pipe_x=-0.4;
-
-      for(var i = 0;i<5;i++){
-         generate_pipe(pipe_x);
-         pipe_x+=0.35;
-      }
+      restartGame();
       renderAllShapes();
       gameStarted = !gameStarted;
    }
@@ -178,41 +158,39 @@ function main() {
 
 
   // Specify the color for clearing <canvas>
-  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  gl.clearColor(0.5, 0.5, 0.5, 1.0);
   renderAllShapes();
 
   // Clear <canvas>
   gl.clear(gl.COLOR_BUFFER_BIT);
 
-  let pipe_x=-0.4;
-
-  for(var i = 0;i<5;i++){
-     generate_pipe(pipe_x);
-     pipe_x+=0.35;
-  }
+  restartGame();
   initTextures(gl);
+
+  document.onkeydown = keydown;
 
   renderAllShapes();
   requestAnimationFrame(tick);
 }
 
 function generate_pipe(pipe_x){
-   let height = Math.random()*(50-30)+30;
+   let bot_height = Math.random()*(60-30)+30;
    let bot_pipe = new Rectangle();
    bot_pipe.position = [pipe_x,-1];
    bot_pipe.color = g_selectedColor.slice();
-   bot_pipe.size = height;
+   bot_pipe.size = bot_height;
    g_shapesList.push(bot_pipe);
 
 
    let top_pipe = new Rectangle();
+   let top_height = (Math.random()*(100-90)+90)-bot_height;
    top_pipe.position = [pipe_x,1];
    top_pipe.color = g_selectedColor.slice();
-   top_pipe.size = height;
+   top_pipe.size = top_height;
    top_pipe.top = true;
    g_shapesList.push(top_pipe);
 
-   pipe_x+=0.35;
+   pipe_x+=0.65;
 }
 
 var g_startTime = performance.now()/1000.0;
@@ -235,8 +213,6 @@ function updateAnimationAngle(){
    var len = g_shapesList.length;
    var pop = 0;
    if(gameStarted){
-      document.onkeydown = keydown;
-
       for(var i = 0; i < len; i++) {
          g_shapesList[i].position[0]=g_shapesList[i].position[0]-0.01;
          if(g_shapesList[i].position[0]<-1){
@@ -246,24 +222,22 @@ function updateAnimationAngle(){
 
       for(var i = 0; i < pop; i++) {
          g_shapesList.shift();
-         let new_pipe_x = g_shapesList[g_shapesList.length-1].position[0]+0.35;
+         let new_pipe_x = g_shapesList[g_shapesList.length-1].position[0]+0.65;
          generate_pipe(new_pipe_x);
       }
 
       if(restartGravity == true){
         fall = 0.00005
      }else{
-        console.log("In here");
         fall += 0.0005;
      }
-     console.log(fall);
      restartGravity = false;
      birdPosition[1] -= fall;
    }
 
    if(birdPosition[1] <= -0.93){
+      restartGame();
       gameStarted = false;
-      birdPosition = [-.69, -0.02];
    }
 }
 
@@ -315,8 +289,15 @@ function renderAllShapes(){
    point.size = 9;
    point.render();
 
+
    var len = g_shapesList.length;
    for(var i = 0; i < len; i++) {
+      if(point.collide(g_shapesList[i])){
+         wait(1000);
+         restartGame();
+         gameStarted=false;
+         break;
+      }
       g_shapesList[i].render();
    }
 }
@@ -391,3 +372,25 @@ function loadTexture(gl, texture, u_Sampler, image, texUnit) {
     }
        // renderScene();
  }
+
+function restartGame(){
+   g_shapesList=[];
+   pipe_x=-0.4;
+   birdPosition = [-.9, -0.02];
+
+
+   for(var i = 0;i<3;i++){
+      generate_pipe(pipe_x);
+      pipe_x+=0.5;
+   }
+}
+
+//code from http://www.endmemo.com/js/pause.php
+function wait(ms){
+    var d = new Date();
+    var d2 = null;
+
+    while(d2-d < ms){
+      d2 = new Date();
+   }
+}
