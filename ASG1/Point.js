@@ -4,12 +4,17 @@ class Point{
       this.position = [0.0,0.0,0.0];
       this.color = [1.0,1.0,1.0];
       this.size = 5.0;
+      this.textureNum = 1;
+      this.texColorWeight = 0;
    }
 
    render(){
       var xy = this.position;
       var rgba = this.color;
       var size = this.size;
+
+      gl.uniform1i(u_whichTexture,this.textureNum);
+      gl.uniform1i(u_texColorWeight,this.texColorWeight);
 
       //quit using the buffer to send the attribute
       gl.disableVertexAttribArray(a_Position);

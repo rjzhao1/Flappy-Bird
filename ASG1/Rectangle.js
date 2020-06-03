@@ -5,11 +5,15 @@ class Rectangle {
       this.color = [1.0,1.0,1.0];
       this.size = 20.0;
       this.top = false;
+      this.textureNum = 1;
+      this.texColorWeight = 0;
    }
    render(){
       var xy = this.position;
       var rgba = this.color;
       var size = this.size;
+      gl.uniform1i(u_whichTexture,this.textureNum);
+      gl.uniform1i(u_texColorWeight,this.texColorWeight);
 
       // gl.vertexAttrib3f(a_Position, xy[0], xy[1], 0.0);
       // Pass the color of a point to u_FragColor variable
@@ -20,12 +24,13 @@ class Rectangle {
       var d = this.size/60;
 
       if(this.top){
-         drawTriangle([xy[0],xy[1],xy[0]+0.15,xy[1],xy[0],xy[1]-d]);
-         drawTriangle([xy[0]+0.15,xy[1]-d,xy[0],xy[1]-d,xy[0]+0.15,xy[1]]);
+         drawTriangleUV([xy[0],xy[1],xy[0]+0.15,xy[1],xy[0],xy[1]-d],  [xy[0]+0.15,xy[1]-d,xy[0],xy[1]-d,xy[0]+0.15,xy[1]]);
+         drawTriangleUV([xy[0]+0.15,xy[1]-d,xy[0],xy[1]-d,xy[0]+0.15,xy[1]],  [xy[0],xy[1],xy[0]+0.15,xy[1],xy[0],xy[1]-d]);
       }else{
-         drawTriangle([xy[0],xy[1],xy[0]+0.15,xy[1],xy[0],xy[1]+d]);
-         drawTriangle([xy[0]+0.15,xy[1]+d,xy[0],xy[1]+d,xy[0]+0.15,xy[1]]);
+         drawTriangleUV([xy[0],xy[1],xy[0]+0.15,xy[1],xy[0],xy[1]+d], [xy[0]+0.15,xy[1]-d,xy[0],xy[1]-d,xy[0]+0.15,xy[1]]);
+         drawTriangleUV([xy[0]+0.15,xy[1]+d,xy[0],xy[1]+d,xy[0]+0.15,xy[1]], [xy[0],xy[1],xy[0]+0.15,xy[1],xy[0],xy[1]-d]);
       }
 
    }
+
 }

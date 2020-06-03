@@ -3,18 +3,31 @@
 var VSHADER_SOURCE =`
    attribute vec4 a_Position;
    uniform float u_Size;
+   attribute vec2 a_UV;
+   varying vec2 v_UV;
    void main() {
       gl_Position = a_Position;
       gl_PointSize = u_Size;
+      v_UV = a_UV;
    }`
 
 // Fragment shader program
 var FSHADER_SOURCE =`
    precision mediump float;
    uniform vec4 u_FragColor;
+   uniform vec4 u_BaseColor;
+   varying vec2 v_UV;
+   uniform sampler2D u_Sampler0;
+   uniform int u_whichTexture;
    void main() {
-      gl_FragColor = u_FragColor;
+      if(u_whichTexture==1){
+         gl_FragColor = texture2D(u_Sampler0,v_UV);
+      }else{
+         gl_FragColor = u_FragColor;
+      }
+
    }`
+
 const POINT = 0;
 const TRIANGLE = 1;
 const CIRCLE = 2;
@@ -32,6 +45,11 @@ let g_segment = 10;
 // let g_cat = false;
 let birdPosition = [-.69, -0.02];
 let gameStarted = false;
+let u_Sampler0;
+let u_Sampler1;
+let u_texColorWeight;
+let u_whichTexture;
+let a_UV;
 
 function setupWebGL(){
    // Retrieve <canvas> element
@@ -70,6 +88,26 @@ function connectVariableToGLSL(){
    u_Size =gl.getUniformLocation(gl.program,'u_Size');
    if (!u_Size) {
      console.log('Failed to get the storage location of u_Size');
+     return;
+   }
+
+
+   u_Sampler0 = gl.getUniformLocation(gl.program, 'u_Sampler0');
+   if (!u_Sampler0) {
+     console.log('Failed to get the storage location of u_Sampler0');
+     return false;
+   }
+
+   // Get the storage location of u_whichTexture
+   u_whichTexture = gl.getUniformLocation(gl.program, 'u_whichTexture');
+   if (!u_whichTexture) {
+     console.log('Failed to get the storage location of u_whichTexture');
+     return false;
+   }
+
+   a_UV = gl.getAttribLocation(gl.program, 'a_UV');
+   if (a_UV < 0) {
+     console.log('Failed to get the storage location of a_UV');
      return;
    }
 }
@@ -132,7 +170,7 @@ function main() {
 
 
   // Register function (event handler) to be called on a mouse press
-  canvas.onmousedown = click;
+  // canvas.onmousedown = click;
   // canvas.onmousemove = function(ev){
   //                          if(ev.buttons==1){click(ev)}
   //                          if(g_cat){catEvent(ev)}};
@@ -152,6 +190,8 @@ function main() {
      generate_pipe(pipe_x);
      pipe_x+=0.35;
   }
+  initTextures(gl);
+
   renderAllShapes();
   requestAnimationFrame(tick);
 }
@@ -177,6 +217,9 @@ function generate_pipe(pipe_x){
 
 var g_startTime = performance.now()/1000.0;
 var g_seconds = performance.now()/1000.0-g_startTime;
+let restartGravity = false;
+let fall = 0.00005;
+
 function tick(){
    g_seconds=performance.now()/1000.0-g_startTime;
    // console.log(g_seconds);
@@ -192,6 +235,8 @@ function updateAnimationAngle(){
    var len = g_shapesList.length;
    var pop = 0;
    if(gameStarted){
+      document.onkeydown = keydown;
+
       for(var i = 0; i < len; i++) {
          g_shapesList[i].position[0]=g_shapesList[i].position[0]-0.01;
          if(g_shapesList[i].position[0]<-1){
@@ -204,6 +249,21 @@ function updateAnimationAngle(){
          let new_pipe_x = g_shapesList[g_shapesList.length-1].position[0]+0.35;
          generate_pipe(new_pipe_x);
       }
+
+      if(restartGravity == true){
+        fall = 0.00005
+     }else{
+        console.log("In here");
+        fall += 0.0005;
+     }
+     console.log(fall);
+     restartGravity = false;
+     birdPosition[1] -= fall;
+   }
+
+   if(birdPosition[1] <= -0.93){
+      gameStarted = false;
+      birdPosition = [-.69, -0.02];
    }
 }
 
@@ -248,8 +308,86 @@ function renderAllShapes(){
    // Clear <canvas>
    gl.clear(gl.COLOR_BUFFER_BIT);
 
+   point = new Rectangle();
+   point.position=birdPosition;
+   point.textureNum = 0;
+   point.color = [1, 0, 0, 1];
+   point.size = 9;
+   point.render();
+
    var len = g_shapesList.length;
    for(var i = 0; i < len; i++) {
       g_shapesList[i].render();
    }
 }
+
+function initTextures(gl) {
+  // Create a texture object
+  var texture0 = gl.createTexture();
+  var texture1 = gl.createTexture();
+  if (!texture0 || !texture1) {
+    console.log('Failed to create the texture object');
+    return false;
+  }
+
+  // Get the storage location of u_Sampler0 and u_Sampler1
+  var u_Sampler0 = gl.getUniformLocation(gl.program, 'u_Sampler0');
+  if (!u_Sampler0 ) {
+    console.log('Failed to get the storage location of u_Sampler');
+    return false;
+  }
+
+  // Create the image object
+  var image0 = new Image();
+  var image1 = new Image();
+  if (!image0 || !image1) {
+    console.log('Failed to create the image object');
+    return false;
+  }
+  // Register the event handler to be called when image loading is completed
+  image0.onload = function(){ loadTexture(gl, texture0, u_Sampler0, image0, 0); };
+  // Tell the browser to load an Image
+  image0.src = 'pipe.png';
+
+
+  return true;
+}
+
+
+// Specify whether the texture unit is ready to use
+function loadTexture(gl, texture, u_Sampler, image, texUnit) {
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);// Flip the image's y-axis
+  // Make the texture unit active
+  if (texUnit == 0) {
+    gl.activeTexture(gl.TEXTURE0);
+  } else {
+    gl.activeTexture(gl.TEXTURE1);
+  }
+  // Bind the texture object to the target
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+
+  // Set texture parameters
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  // Set the image to texture
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+  gl.uniform1i(u_Sampler, texUnit);   // Pass the texure unit to u_Sampler
+
+  // Clear <canvas>
+  gl.clear(gl.COLOR_BUFFER_BIT);
+}
+
+ function keydown(ev){
+    if (ev.keyCode==87) { //W key
+       gameStarted = true;
+       restartGravity = true;
+       birdPosition[1] += 0.15;
+
+    }else if(ev.keyCode==32){ //Space bar
+       gameStarted = true;
+       restartGravity = true;
+       birdPosition[1] += 0.15;
+
+    }
+       // renderScene();
+ }
